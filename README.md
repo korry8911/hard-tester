@@ -6,9 +6,9 @@ This is a project whose goal is to test the consistency properties of a Riak clu
 # Running
 
 You will need Docker, Jupyter Notebook, as well as the following python libraries:
-IPyParallel 5.2.0
-Riak 2.6.2
-Docker-Py 1.6.0
+ - IPyParallel 5.2.0
+ - Riak 2.6.2
+ - Docker-Py 1.6.0
 
 ```
 eval $(docker-machine env default --shell=bash)
