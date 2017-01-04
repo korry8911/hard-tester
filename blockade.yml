@@ -1,0 +1,30 @@
+containers:
+    node1: 
+        image: basho/riak-kv:latest 
+        hostname: node1 
+        name: node1 
+
+
+    node2: 
+        image: basho/riak-kv:latest 
+        hostname: node2 
+        name: node2 
+
+
+    node3: 
+        image: basho/riak-kv:latest 
+        hostname: node3 
+        name: node3 
+
+
+    node4: 
+        image: basho/riak-kv:latest 
+        hostname: node4 
+        name: node4 
+
+
+    node5: 
+        image: basho/riak-kv:latest 
+        hostname: node5 
+        name: node5 
+
