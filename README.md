@@ -14,7 +14,7 @@ Clone this repo: `git clone https://github.com/korry8911/hard-tester.git`
 
 Move into repo: `cd ./hard-tester`
 
-Ensure docker enviroment is set (assuming docker-machine VM named default): `eval $(docker-machine env default --shell=bash)`
+Set docker enviroment (assuming docker-machine VM named default): `eval $(docker-machine env default --shell=bash)`
 
 Build target docker container: `docker build -t hardtester .`
 
