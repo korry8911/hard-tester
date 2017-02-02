@@ -30,9 +30,6 @@ def stop_blockade(repo_path):
     os.system("(cd "+repo_path+" && blockade destroy)")
     os.system("(cd "+repo_path+" && docker rm -f `docker ps --no-trunc -aq`)")
 
-def stop_cluster():
-    proc = subprocess.Popen(["ipcluster stop"], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
-    
 def start_cluster_controller():
     proc = subprocess.Popen(["sudo ipcontroller --ip=$(ipconfig getifaddr en0)"], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
     
@@ -46,14 +43,6 @@ def start_cluster_engines(docker_client, jup_sec_path='~/.ipython/profile_defaul
             print os.system("docker cp "+jup_sec_path+"ipcontroller-engine.json "+node+":/ipcontroller-engine.json")
             job = docker_client.exec_create(node, 'sudo ipengine --file=/ipcontroller-engine.json')
             docker_client.exec_start(job['Id'], detach=True)
-
-def stop_cluster_engines(docker_client):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        for item in docker_client.containers():
-            node = item['Names'][0][1:]
-            job = docker_client.exec_create(node, 'ipengine stop')
-            print docker_client.exec_start(job['Id'])
 
 def riak_cluster(docker_client):
     with warnings.catch_warnings():
@@ -82,6 +71,40 @@ def riak_cluster(docker_client):
             print client.exec_start(job['Id'])
     return nodes
 
+def create_bucket_type(docker_client, props):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        client = docker_client
+        nodes = []
+        container = client.containers()[0]
+        name = container['Names'][0][1:]
+        ip = container['NetworkSettings']['Networks']['bridge']['IPAddress']
+
+        jobs = []
+        create_str = """riak-admin bucket-type create %(name)s '{"props":{"allow_mult":"%(allow_mult)s","n_val":%(n_val)s,"last_write_wins": %(last_write_wins)s,"r": %(r)s,"pr": %(pr)s,"w": %(w)s,"dw": %(dw)s,"pw": %(pw)s,"rw": %(rw)s,"notfound_ok": %(notfound_ok)s,"basic_quorum": %(basic_quorum)s,"consistent": %(consistent)s}}' """ \
+                                                                            % ({'name': props['name'], \
+                                                                              'allow_mult': props['allow_mult'], \
+                                                                              'n_val': props['n_val'], \
+                                                                              'last_write_wins': props['last_write_wins'], \
+                                                                              'r': props['r'], \
+                                                                              'pr': props['pr'], \
+                                                                              'w':props['w'], \
+                                                                              'dw': props['dw'], \
+                                                                              'pw': props['pw'], \
+                                                                              'rw': props['rw'], \
+                                                                              'notfound_ok': props['notfound_ok'], \
+                                                                              'basic_quorum': props['basic_quorum'], \
+                                                                              'consistent': props['consistent']})
+        activate_str = 'riak-admin bucket-type activate '+str(props['name'])
+        status_str = 'riak-admin bucket-type status '+str(props['name'])
+        
+        jobs.append(client.exec_create(name,create_str))
+        jobs.append(client.exec_create(name,activate_str))
+        jobs.append(client.exec_create(name,status_str))
+        for job in jobs:
+            print client.exec_start(job['Id'])
+    return
+
 def get_riak_nodes(docker_client):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -92,9 +115,9 @@ def get_riak_nodes(docker_client):
         print nodes
     return nodes
 
-def exec_op(host, target, op, bucket, key, value_field, timeout):
+def exec_op(host, target, op, bucket_type, bucket, key, value_field, timeout):
     client = riak.RiakClient(host=target['ip'], http_port=8098)
-    bucket = client.bucket(bucket)
+    bucket = client.bucket(bucket, bucket_type=bucket_type)
     result = {}
     result['host'] = host['name']
     result['target'] = target['name']
@@ -186,11 +209,11 @@ def start_parallel_executor():
     dview.use_cloudpickle()
     return dview
 
-def run_test(run_cmds, bucket_name, key_name, value_field, timeout):
+def run_test(run_cmds, bucket_type, bucket_name, key_name, value_field, timeout):
     results= []
     for cmd in run_cmds:
         time.sleep(random.random()*1)
-        res = exec_op(cmd['host'], cmd['target'], cmd['op'], bucket_name, key_name, value_field, timeout)
+        res = exec_op(cmd['host'], cmd['target'], cmd['op'], bucket_type, bucket_name, key_name, value_field, timeout)
         results.append(res)
     return results
 
@@ -231,8 +254,8 @@ def gen_cmds(nodes, node, num_cmds):
         cmds.append(new_cmd)
     return cmds
 
-def start_consitency_test(parallel_executor, nodes, num_commands, bucket_name, key_name, value_field, timeout, repo_path):
-    parallel_results = parallel_executor.map(lambda node: run_test(gen_cmds(nodes, node, num_commands), bucket_name, key_name, value_field, timeout), nodes)
+def start_consitency_test(parallel_executor, nodes, num_commands, bucket_type, bucket_name, key_name, value_field, timeout, repo_path):
+    parallel_results = parallel_executor.map(lambda node: run_test(gen_cmds(nodes, node, num_commands), bucket_type, bucket_name, key_name, value_field, timeout), nodes)
     nemisis_up = False
     node_names = ["node"+str(i) for i in range(1,len(nodes)+1)]
     nemisis_results = []
