@@ -1,0 +1,5 @@
+.ipynb_checkpoints/
+hardtester.pyc
+linearizability-checker/lt-etcd-test
+linearizability-checker/lt-etcd-test.dSYM/
+linearizability-checker/logs/test_0.log
