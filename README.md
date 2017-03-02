@@ -18,6 +18,6 @@ Set docker enviroment (assuming docker-machine VM named default): `eval $(docker
 
 Build target docker container: `docker build -t hardtester .`
 
-Launch Juypter notebook: `sudo -E juypter notebook`
+Launch Juypter notebook: `sudo -E jupyter notebook`
 
 Open `test_runner.ipynb` and run the test, cell by cell
